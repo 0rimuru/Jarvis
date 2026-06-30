@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Jarvis">
+<title>Jarvis</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #0A0E14;
+    --panel: #131B27;
+    --panel-2: #1A2332;
+    --line: #232E3F;
+    --text: #F0F4F8;
+    --text-dim: #94A3B8;
+    --text-faint: #5B6B82;
+    --accent: #4ADE80;
+    --accent-dim: #2E8B57;
+    --accent-glow: rgba(74,222,128,0.35);
+    --red: #FB7185;
+    --amber: #FBBF24;
+    --radius: 18px;
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
+  html,body{
+    margin:0; padding:0; height:100%; background:var(--bg); color:var(--text);
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
+    overscroll-behavior:none;
+  }
+  body{
+    display:flex; flex-direction:column; height:100dvh; width:100%;
+    background:
+      radial-gradient(ellipse 600px 300px at 50% -10%, rgba(74,222,128,0.07), transparent 60%),
+      var(--bg);
+  }
+  ::-webkit-scrollbar{width:0px; background:transparent;}
+
+  /* ---------- HEADER ---------- */
+  header{
+    padding: calc(var(--safe-top) + 14px) 20px 14px 20px;
+    display:flex; align-items:center; justify-content:space-between;
+    border-bottom:1px solid var(--line);
+    flex-shrink:0;
+  }
+  .brand{ display:flex; align-items:center; gap:10px; }
+  .brand-mark{
+    width:30px; height:30px; border-radius:9px;
+    background: linear-gradient(135deg, var(--accent-dim), var(--accent));
+    display:flex; align-items:center; justify-content:center;
+    font-family:'IBM Plex Mono'; font-weight:600; font-size:13px; color:#06150C;
+    box-shadow: 0 0 18px var(--accent-glow);
+  }
+  .brand-name{ font-family:'Space Grotesk'; font-weight:600; font-size:18px; letter-spacing:0.2px; }
+  .status-pill{
+    display:flex; align-items:center; gap:6px;
+    font-family:'IBM Plex Mono'; font-size:10.5px; color:var(--text-dim);
+    padding:6px 10px; border:1px solid var(--line); border-radius:100px;
+  }
+  .dot{ width:6px; height:6px; border-radius:50%; background:var(--accent); box-shadow:0 0 8px var(--accent);}
+  .dot.thinking{ animation: pulse 1.1s ease-in-out infinite; }
+  @keyframes pulse{ 0%,100%{opacity:1;} 50%{opacity:0.25;} }
+
+  /* ---------- TABS ---------- */
+  nav.tabs{
+    display:flex; gap:6px; padding:10px 16px; border-bottom:1px solid var(--line);
+    flex-shrink:0; overflow-x:auto;
+  }
+  nav.tabs button{
+    font-family:'Space Grotesk'; font-size:13.5px; font-weight:500;
+    background:transparent; border:1px solid transparent; color:var(--text-dim);
+    padding:8px 14px; border-radius:100px; white-space:nowrap; cursor:pointer;
+  }
+  nav.tabs button.active{
+    background:var(--panel-2); border-color:var(--line); color:var(--text);
+  }
+
+  /* ---------- MAIN VIEWS ---------- */
+  main{ flex:1; min-height:0; position:relative; }
+  .view{ position:absolute; inset:0; display:none; flex-direction:column; min-height:0; }
+  .view.active{ display:flex; }
+
+  /* ---------- CHAT ---------- */
+  #chatLog{
+    flex:1; overflow-y:auto; padding:18px 16px 10px 16px;
+    display:flex; flex-direction:column; gap:14px;
+  }
+  .msg{ max-width:86%; display:flex; flex-direction:column; gap:4px; }
+  .msg.user{ align-self:flex-end; align-items:flex-end; }
+  .msg.assistant{ align-self:flex-start; align-items:flex-start; }
+  .bubble{
+    padding:11px 14px; border-radius:16px; font-size:15px; line-height:1.45;
+    white-space:pre-wrap; word-wrap:break-word;
+  }
+  .msg.user .bubble{
+    background: var(--accent); color:#06150C; border-bottom-right-radius:5px; font-weight:500;
+  }
+  .msg.assistant .bubble{
+    background: var(--panel-2); border:1px solid var(--line); border-bottom-left-radius:5px;
+  }
+  .msg.assistant .bubble.error{ border-color: rgba(251,113,133,0.4); color:#FFD7DC; }
+  .meta-tag{
+    font-family:'IBM Plex Mono'; font-size:10px; color:var(--text-faint); padding:0 4px;
+  }
+  .typing{ display:flex; gap:4px; padding:4px 2px; }
+  .typing span{
+    width:6px; height:6px; border-radius:50%; background:var(--text-dim);
+    animation: bounce 1.2s infinite ease-in-out;
+  }
+  .typing span:nth-child(2){ animation-delay:0.15s; }
+  .typing span:nth-child(3){ animation-delay:0.3s; }
+  @keyframes bounce{ 0%,60%,100%{ transform:translateY(0); opacity:0.4;} 30%{ transform:translateY(-5px); opacity:1;} }
+
+  .quick-row{
+    display:flex; gap:8px; padding:0 16px 12px 16px; overflow-x:auto; flex-shrink:0;
+  }
+  .quick-chip{
+    font-family:'IBM Plex Mono'; font-size:11.5px; color:var(--accent);
+    background: rgba(74,222,128,0.08); border:1px solid rgba(74,222,128,0.25);
+    padding:7px 12px; border-radius:100px; white-space:nowrap; cursor:pointer;
+  }
+
+  /* ---------- INPUT BAR ---------- */
+  .input-bar{
+    flex-shrink:0; padding:10px 14px calc(12px + var(--safe-bottom)) 14px;
+    border-top:1px solid var(--line); background:var(--bg);
+    display:flex; align-items:flex-end; gap:8px;
+  }
+  .input-wrap{
+    flex:1; background:var(--panel-2); border:1px solid var(--line); border-radius:22px;
+    padding:4px 6px 4px 16px; display:flex; align-items:center; min-height:46px;
+  }
+  #textInput{
+    flex:1; background:transparent; border:none; outline:none; color:var(--text);
+    font-family:'Inter'; font-size:15px; resize:none; max-height:100px; padding:8px 0;
+  }
+  #textInput::placeholder{ color:var(--text-faint); }
+  .icon-btn{
+    width:38px; height:38px; border-radius:50%; border:none; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center; cursor:pointer;
+    background:transparent; color:var(--text-dim);
+  }
+  .send-btn{
+    width:46px; height:46px; border-radius:50%; border:none; flex-shrink:0;
+    background:var(--accent); color:#06150C; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    box-shadow:0 0 16px var(--accent-glow);
+  }
+  .send-btn:disabled{ opacity:0.35; box-shadow:none; }
+  .mic-btn{
+    background: var(--panel-2); border:1px solid var(--line); color:var(--text-dim);
+  }
+  .mic-btn.listening{
+    background: rgba(251,113,133,0.12); border-color: rgba(251,113,133,0.4); color: var(--red);
+  }
+
+  /* waveform signature element */
+  .wave{
+    display:flex; align-items:center; justify-content:center; gap:3px; height:18px;
+  }
+  .wave span{
+    width:2.5px; border-radius:2px; background: var(--accent); height:5px;
+    transition: height 0.12s ease;
+  }
+  .listening .wave span{ animation: wavebar 0.9s infinite ease-in-out; background: var(--red); }
+  .wave span:nth-child(1){ animation-delay:0s; }
+  .wave span:nth-child(2){ animation-delay:0.12s; }
+  .wave span:nth-child(3){ animation-delay:0.24s; }
+  .wave span:nth-child(4){ animation-delay:0.36s; }
+  .wave span:nth-child(5){ animation-delay:0.48s; }
+  @keyframes wavebar{ 0%,100%{ height:5px;} 50%{ height:16px;} }
+
+  /* ---------- MARKETS VIEW ---------- */
+  #marketsScroll{ flex:1; overflow-y:auto; padding:16px; }
+  .section-title{
+    font-family:'Space Grotesk'; font-size:13px; font-weight:600; color:var(--text-dim);
+    text-transform:uppercase; letter-spacing:1px; margin: 18px 0 10px 0;
+  }
+  .section-title:first-child{ margin-top:0; }
+  .watchlist-row{
+    display:flex; gap:8px; margin-bottom:14px;
+  }
+  .add-symbol{
+    flex:1; background:var(--panel-2); border:1px solid var(--line); border-radius:12px;
+    padding:10px 14px; color:var(--text); font-family:'IBM Plex Mono'; font-size:13px;
+    outline:none;
+  }
+  .add-symbol::placeholder{ color:var(--text-faint); }
+  .add-btn{
+    background:var(--accent); color:#06150C; border:none; border-radius:12px;
+    padding:0 18px; font-family:'Space Grotesk'; font-weight:600; font-size:14px; cursor:pointer;
+  }
+  .ticker-card{
+    background:var(--panel); border:1px solid var(--line); border-radius:14px;
+    padding:14px 16px; display:flex; align-items:center; justify-content:space-between;
+    margin-bottom:10px;
+  }
+  .ticker-left{ display:flex; flex-direction:column; gap:3px; }
+  .ticker-symbol{ font-family:'Space Grotesk'; font-weight:600; font-size:15px; }
+  .ticker-name{ font-size:12px; color:var(--text-faint); }
+  .ticker-right{ text-align:right; display:flex; flex-direction:column; gap:3px; }
+  .ticker-price{ font-family:'IBM Plex Mono'; font-size:15px; font-weight:600; }
+  .ticker-change{ font-family:'IBM Plex Mono'; font-size:12px; }
+  .ticker-change.up{ color: var(--accent); }
+  .ticker-change.down{ color: var(--red); }
+  .ticker-remove{
+    background:none; border:none; color:var(--text-faint); font-size:18px; padding:0 0 0 10px; cursor:pointer;
+  }
+  .empty-state{
+    text-align:center; padding:30px 20px; color:var(--text-faint); font-size:13.5px; line-height:1.6;
+  }
+  .news-card{
+    background:var(--panel); border:1px solid var(--line); border-radius:14px;
+    padding:14px 16px; margin-bottom:10px;
+  }
+  .news-title{ font-size:14.5px; line-height:1.4; margin-bottom:6px; }
+  .news-meta{ font-family:'IBM Plex Mono'; font-size:10.5px; color:var(--text-faint); }
+  .disclaimer-box{
+    background: rgba(251,191,36,0.07); border:1px solid rgba(251,191,36,0.25);
+    border-radius:12px; padding:12px 14px; font-size:12px; line-height:1.5; color:#F3D88A;
+    margin-top:6px;
+  }
+  .refresh-row{ display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;}
+  .refresh-btn{
+    font-family:'IBM Plex Mono'; font-size:11px; color:var(--accent); background:none; border:none; cursor:pointer;
+  }
+  .loading-line{
+    height:14px; border-radius:6px; background: linear-gradient(90deg, var(--panel-2) 25%, var(--line) 50%, var(--panel-2) 75%);
+    background-size:400% 100%; animation: shimmer 1.4s infinite;
+  }
+  @keyframes shimmer{ 0%{background-position:100% 0;} 100%{background-position:-100% 0;} }
+
+  /* ---------- SETTINGS VIEW ---------- */
+  #settingsScroll{ flex:1; overflow-y:auto; padding:16px; }
+  .setting-card{
+    background:var(--panel); border:1px solid var(--line); border-radius:14px;
+    padding:16px; margin-bottom:12px;
+  }
+  .setting-label{ font-family:'Space Grotesk'; font-size:14px; font-weight:600; margin-bottom:6px; }
+  .setting-desc{ font-size:12.5px; color:var(--text-dim); line-height:1.5; margin-bottom:10px; }
+  .setting-input{
+    width:100%; background:var(--panel-2); border:1px solid var(--line); border-radius:10px;
+    padding:10px 12px; color:var(--text); font-family:'IBM Plex Mono'; font-size:13px; outline:none;
+  }
+  .save-btn{
+    width:100%; background:var(--accent); color:#06150C; border:none; border-radius:10px;
+    padding:12px; font-family:'Space Grotesk'; font-weight:600; font-size:14px; cursor:pointer; margin-top:10px;
+  }
+  .clear-btn{
+    width:100%; background:transparent; color:var(--red); border:1px solid rgba(251,113,133,0.3); border-radius:10px;
+    padding:12px; font-family:'Space Grotesk'; font-weight:600; font-size:14px; cursor:pointer; margin-top:8px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <div class="brand-mark">J</div>
+    <div class="brand-name">Jarvis</div>
+  </div>
+  <div class="status-pill"><span class="dot" id="statusDot"></span><span id="statusText">bereit</span></div>
+</header>
+
+<nav class="tabs">
+  <button class="active" data-view="chat">Chat</button>
+  <button data-view="markets">Märkte</button>
+  <button data-view="trends">Trends</button>
+  <button data-view="settings">Einstellungen</button>
+</nav>
+
+<main>
+
+  <!-- CHAT VIEW -->
+  <section class="view active" id="view-chat">
+    <div id="chatLog"></div>
+    <div class="quick-row" id="quickRow">
+      <div class="quick-chip" data-q="Was gibt's Neues in der Welt heute?">Was ist heute passiert?</div>
+      <div class="quick-chip" data-q="Erinnere mich morgen um 9 Uhr ans Wasser trinken">Erinnerung setzen</div>
+      <div class="quick-chip" data-q="Erkläre mir kurz was Bitcoin gerade bewegt">Bitcoin News</div>
+    </div>
+    <div class="input-bar">
+      <button class="icon-btn mic-btn" id="micBtn" aria-label="Spracheingabe">
+        <svg id="micIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+        <div class="wave" id="micWave" style="display:none;"><span></span><span></span><span></span><span></span><span></span></div>
+      </button>
+      <div class="input-wrap">
+        <textarea id="textInput" placeholder="Frag Jarvis etwas…" rows="1"></textarea>
+      </div>
+      <button class="send-btn" id="sendBtn" aria-label="Senden">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+      </button>
+    </div>
+  </section>
+
+  <!-- MARKETS VIEW -->
+  <section class="view" id="view-markets">
+    <div id="marketsScroll">
+      <div class="section-title">Watchlist</div>
+      <div class="watchlist-row">
+        <input class="add-symbol" id="symbolInput" placeholder="z.B. bitcoin, AAPL, solana…">
+        <button class="add-btn" id="addSymbolBtn">+</button>
+      </div>
+      <div id="watchlistContainer">
+        <div class="empty-state">Noch nichts auf der Liste.<br>Füg oben einen Coin (z.B. "bitcoin") oder eine Aktie (z.B. "AAPL") hinzu.</div>
+      </div>
+
+      <div class="refresh-row">
+        <div class="section-title" style="margin-bottom:0;">Markt-Stimmung</div>
+        <button class="refresh-btn" id="refreshSentiment">↻ aktualisieren</button>
+      </div>
+      <div id="sentimentContainer">
+        <div class="loading-line" style="width:100%; margin-bottom:8px;"></div>
+        <div class="loading-line" style="width:70%;"></div>
+      </div>
+
+      <div class="disclaimer-box">
+        Keine Anlageberatung. Kurse und Stimmungsdaten dienen nur der Information — Jarvis trifft keine Kauf- oder Verkaufsempfehlungen und führt keine Trades aus.
+      </div>
+    </div>
+  </section>
+
+  <!-- TRENDS VIEW -->
+  <section class="view" id="view-trends">
+    <div id="marketsScroll" style="padding:16px; flex:1; overflow-y:auto;">
+      <div class="refresh-row">
+        <div class="section-title" style="margin-bottom:0;">Aktuelle Trends</div>
+        <button class="refresh-btn" id="refreshTrends">↻ neu suchen</button>
+      </div>
+      <div class="setting-desc" style="margin-bottom:14px;">
+        Jarvis durchsucht aktuelle News, um zu zeigen, worüber gerade gesprochen wird — als Information, nicht als Kaufsignal.
+      </div>
+      <div id="trendsContainer">
+        <div class="empty-state">Tippe auf "neu suchen", damit Jarvis aktuelle Markt-Trends recherchiert.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SETTINGS VIEW -->
+  <section class="view" id="view-settings">
+    <div id="settingsScroll">
+      <div class="setting-card">
+        <div class="setting-label">Anthropic API-Key</div>
+        <div class="setting-desc">
+          Jarvis braucht einen eigenen Claude API-Key, um zu antworten und im Internet zu suchen. Du bekommst ihn unter console.anthropic.com → API Keys. Der Key wird nur lokal auf deinem iPhone gespeichert, niemals an Dritte gesendet.
+        </div>
+        <input class="setting-input" id="apiKeyInput" type="password" placeholder="sk-ant-...">
+        <button class="save-btn" id="saveKeyBtn">Speichern</button>
+      </div>
+      <div class="setting-card">
+        <div class="setting-label">Sprachausgabe</div>
+        <div class="setting-desc">Soll Jarvis Antworten zusätzlich vorlesen?</div>
+        <input class="setting-input" id="voiceToggle" type="checkbox" style="width:auto; padding:0;">
+        <label for="voiceToggle" style="font-size:13px; color:var(--text-dim); margin-left:8px;">Antworten laut vorlesen</label>
+      </div>
+      <div class="setting-card">
+        <div class="setting-label">Daten</div>
+        <div class="setting-desc">Löscht den gesamten Chatverlauf und die Watchlist von diesem Gerät.</div>
+        <button class="clear-btn" id="clearDataBtn">Alle Daten löschen</button>
+      </div>
+      <div class="setting-card">
+        <div class="setting-label">Zum Home-Bildschirm</div>
+        <div class="setting-desc">
+          In Safari: Teilen-Symbol antippen → "Zum Home-Bildschirm" → Hinzufügen. Danach öffnet sich Jarvis wie eine echte App, ganz ohne Browserleiste.
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>
